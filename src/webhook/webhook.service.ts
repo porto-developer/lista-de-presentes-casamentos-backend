@@ -1,0 +1,68 @@
+import {
+  Injectable,
+  Inject,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  PAYMENT_GATEWAY,
+  PaymentGateway,
+} from '../payments/gateways/payment-gateway.interface';
+import { PaymentsService } from '../payments/payments.service';
+
+@Injectable()
+export class WebhookService {
+  private readonly logger = new Logger(WebhookService.name);
+
+  constructor(
+    @Inject(PAYMENT_GATEWAY)
+    private readonly paymentGateway: PaymentGateway,
+    private readonly paymentsService: PaymentsService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  async handlePaymentWebhook(payload: unknown, signature: string) {
+    const webhookSecret = this.configService.get<string>('WEBHOOK_SECRET');
+
+    if (webhookSecret && webhookSecret !== 'change-me-in-production') {
+      const isValid = this.paymentGateway.verifyWebhookSignature(
+        payload,
+        signature,
+      );
+      if (!isValid) {
+        throw new BadRequestException('Assinatura do webhook inválida');
+      }
+    }
+
+    const event = this.paymentGateway.parseWebhookEvent(payload);
+
+    if (!event.providerPaymentId) {
+      throw new BadRequestException('provider_payment_id ausente no payload');
+    }
+
+    this.logger.log(
+      `Webhook received: ${event.providerPaymentId} -> ${event.status}`,
+    );
+
+    switch (event.status) {
+      case 'approved':
+        await this.paymentsService.approveByProviderPaymentId(
+          event.providerPaymentId,
+        );
+        break;
+
+      case 'rejected':
+      case 'failed':
+        await this.paymentsService.rejectByProviderPaymentId(
+          event.providerPaymentId,
+        );
+        break;
+
+      default:
+        this.logger.warn(`Unhandled webhook status: ${event.status}`);
+    }
+
+    return { received: true };
+  }
+}
