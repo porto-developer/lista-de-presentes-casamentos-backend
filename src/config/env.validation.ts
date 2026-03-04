@@ -3,8 +3,7 @@ import { IsEnum, IsNumber, IsString, validateSync } from 'class-validator';
 
 export enum PaymentProvider {
   MOCK = 'mock',
-  MERCADO_PAGO = 'mercado_pago',
-  STRIPE = 'stripe',
+  ASAAS = 'asaas',
 }
 
 export class EnvironmentVariables {

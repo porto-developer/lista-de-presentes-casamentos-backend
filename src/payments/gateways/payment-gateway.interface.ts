@@ -2,14 +2,36 @@ export interface CreatePixPaymentData {
   orderId: number;
   amount: number;
   description: string;
+  customerName: string;
+  customerDocument: string;
+}
+
+export interface CreditCardData {
+  holderName: string;
+  number: string;
+  expiryMonth: string;
+  expiryYear: string;
+  ccv: string;
+}
+
+export interface CreditCardHolderInfo {
+  name: string;
+  email: string;
+  cpfCnpj: string;
+  postalCode: string;
+  addressNumber: string;
+  phone: string;
 }
 
 export interface CreateCardPaymentData {
   orderId: number;
   amount: number;
   description: string;
-  cardLastFour?: string;
-  installments?: number;
+  customerName: string;
+  customerDocument: string;
+  creditCard: CreditCardData;
+  creditCardHolderInfo: CreditCardHolderInfo;
+  remoteIp: string;
 }
 
 export interface PixPaymentResult {

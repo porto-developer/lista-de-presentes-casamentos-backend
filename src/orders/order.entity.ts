@@ -4,19 +4,23 @@ import {
   Column,
   CreateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { OrderItem } from './order-item.entity';
+import { Guest } from '../guests/guest.entity';
 
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 20 })
-  guest_phone: string;
+  @Column({ type: 'int' })
+  guest_id: number;
 
-  @Column({ type: 'varchar', length: 255 })
-  guest_name: string;
+  @ManyToOne(() => Guest, (guest) => guest.orders, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'guest_id' })
+  guest: Guest;
 
   @Column({ type: 'text', nullable: true })
   guest_message: string | null;

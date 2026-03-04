@@ -6,6 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { DataSource, Repository, In } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
@@ -27,6 +28,7 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     private readonly dataSource: DataSource,
     private readonly guestsService: GuestsService,
+    private readonly configService: ConfigService,
     @Inject(PAYMENT_GATEWAY)
     private readonly paymentGateway: PaymentGateway,
   ) {}
@@ -42,7 +44,17 @@ export class OrdersService {
     await queryRunner.startTransaction();
 
     try {
-      await this.guestsService.upsert(dto.guest_name, phone, queryRunner);
+      const document = dto.guest_document.replace(/\D/g, '');
+      if (document.length !== 11) {
+        throw new BadRequestException('CPF inválido');
+      }
+
+      const guest = await this.guestsService.upsert(
+        dto.guest_name,
+        phone,
+        document,
+        queryRunner,
+      );
 
       const giftIds = dto.items.map((i) => i.gift_id);
       const gifts = await queryRunner.manager.find(Gift, {
@@ -67,8 +79,7 @@ export class OrdersService {
       );
 
       const order = queryRunner.manager.create(Order, {
-        guest_phone: phone,
-        guest_name: dto.guest_name,
+        guest_id: guest.id,
         guest_message: dto.guest_message || null,
         total,
         payment_method: dto.payment_method,
@@ -100,6 +111,8 @@ export class OrdersService {
           orderId: savedOrder.id,
           amount: total,
           description: `Presente de casamento - Pedido #${savedOrder.id}`,
+          customerName: guest.name,
+          customerDocument: guest.document,
         });
         paymentResult = {
           providerPaymentId: pixResult.providerPaymentId,
@@ -108,10 +121,34 @@ export class OrdersService {
           expiresAt: pixResult.expiresAt,
         };
       } else {
+        if (!dto.credit_card || !dto.credit_card_holder_info || !dto.remote_ip) {
+          throw new BadRequestException(
+            'Dados do cartão, titular e IP são obrigatórios para pagamento com cartão',
+          );
+        }
+
         const cardResult = await this.paymentGateway.createCardPayment({
           orderId: savedOrder.id,
           amount: total,
           description: `Presente de casamento - Pedido #${savedOrder.id}`,
+          customerName: guest.name,
+          customerDocument: guest.document,
+          creditCard: {
+            holderName: dto.credit_card.holder_name,
+            number: dto.credit_card.number,
+            expiryMonth: dto.credit_card.expiry_month,
+            expiryYear: dto.credit_card.expiry_year,
+            ccv: dto.credit_card.ccv,
+          },
+          creditCardHolderInfo: {
+            name: dto.credit_card_holder_info.name,
+            email: dto.credit_card_holder_info.email,
+            cpfCnpj: dto.credit_card_holder_info.cpf_cnpj,
+            postalCode: dto.credit_card_holder_info.postal_code,
+            addressNumber: dto.credit_card_holder_info.address_number,
+            phone: dto.credit_card_holder_info.phone,
+          },
+          remoteIp: dto.remote_ip,
         });
         paymentResult = {
           providerPaymentId: cardResult.providerPaymentId,
@@ -119,9 +156,11 @@ export class OrdersService {
         };
       }
 
+      const provider = this.configService.get<string>('PAYMENT_PROVIDER', 'mock');
+
       const payment = queryRunner.manager.create(Payment, {
         order_id: savedOrder.id,
-        provider: 'mock',
+        provider,
         provider_payment_id: paymentResult.providerPaymentId,
         method: dto.payment_method,
         amount: total,
@@ -163,7 +202,7 @@ export class OrdersService {
   async findOne(id: number): Promise<Order | null> {
     return this.orderRepository.findOne({
       where: { id },
-      relations: ['items'],
+      relations: ['items', 'guest'],
     });
   }
 }

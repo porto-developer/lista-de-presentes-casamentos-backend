@@ -13,6 +13,7 @@ export class GuestsService {
   async upsert(
     name: string,
     phone: string,
+    document: string,
     queryRunner?: QueryRunner,
   ): Promise<Guest> {
     const repo = queryRunner
@@ -23,10 +24,11 @@ export class GuestsService {
 
     if (existing) {
       existing.name = name;
+      existing.document = document;
       return repo.save(existing);
     }
 
-    const guest = repo.create({ name, phone });
+    const guest = repo.create({ name, phone, document });
     return repo.save(guest);
   }
 }

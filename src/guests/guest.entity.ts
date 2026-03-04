@@ -3,7 +3,9 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Order } from '../orders/order.entity';
 
 @Entity('guests')
 export class Guest {
@@ -16,6 +18,12 @@ export class Guest {
   @Column({ type: 'varchar', length: 20, unique: true })
   phone: string;
 
+  @Column({ type: 'varchar', length: 14, unique: true })
+  document: string;
+
   @CreateDateColumn()
   created_at: Date;
+
+  @OneToMany(() => Order, (order) => order.guest)
+  orders: Order[];
 }

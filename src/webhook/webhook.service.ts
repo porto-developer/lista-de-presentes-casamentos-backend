@@ -4,7 +4,6 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   PAYMENT_GATEWAY,
   PaymentGateway,
@@ -19,20 +18,12 @@ export class WebhookService {
     @Inject(PAYMENT_GATEWAY)
     private readonly paymentGateway: PaymentGateway,
     private readonly paymentsService: PaymentsService,
-    private readonly configService: ConfigService,
   ) {}
 
-  async handlePaymentWebhook(payload: unknown, signature: string) {
-    const webhookSecret = this.configService.get<string>('WEBHOOK_SECRET');
-
-    if (webhookSecret && webhookSecret !== 'change-me-in-production') {
-      const isValid = this.paymentGateway.verifyWebhookSignature(
-        payload,
-        signature,
-      );
-      if (!isValid) {
-        throw new BadRequestException('Assinatura do webhook inválida');
-      }
+  async handlePaymentWebhook(payload: unknown, token: string) {
+    const isValid = this.paymentGateway.verifyWebhookSignature(payload, token);
+    if (!isValid) {
+      throw new BadRequestException('Assinatura do webhook inválida');
     }
 
     const event = this.paymentGateway.parseWebhookEvent(payload);

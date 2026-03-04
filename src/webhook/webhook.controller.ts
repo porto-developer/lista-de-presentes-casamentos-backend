@@ -13,8 +13,10 @@ export class WebhookController {
   @ApiResponse({ status: 400, description: 'Payload ou assinatura inválidos' })
   handlePayment(
     @Body() payload: Record<string, unknown>,
+    @Headers('asaas-access-token') asaasToken: string,
     @Headers('x-webhook-signature') signature: string,
   ) {
-    return this.webhookService.handlePaymentWebhook(payload, signature);
+    const token = asaasToken || signature;
+    return this.webhookService.handlePaymentWebhook(payload, token);
   }
 }
