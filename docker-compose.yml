@@ -10,8 +10,11 @@ services:
       DATABASE_PASSWORD: postgres
       DATABASE_NAME: wedding_gifts
       PORT: 3001
-      PAYMENT_PROVIDER: mock
+      PAYMENT_PROVIDER: asaas
       WEBHOOK_SECRET: change-me-in-production
+      ASAAS_API_KEY: "$$aact_hmlg_000MzkwODA2MWY2OGM3MWRlMDU2NWM3MzJlNzZmNGZhZGY6OjYwYzEzZDQ5LTA4MDktNGYxMi04NWFkLTE2N2Q0OGE5MDVlNTo6JGFhY2hfMDM2MjJhMWItY2UxOS00YjkwLWE1ZDAtZjcwYjBkNTE1ZjBh"
+      ASAAS_AUTH_TOKEN: whsec_JHJLAUa7s5iG4XoKbJmUZg6gKWKm_z_AzvbIiCoPJWs
+      ASAAS_API_URL: https://api-sandbox.asaas.com/v3
     depends_on:
       postgres:
         condition: service_healthy
@@ -26,7 +29,6 @@ services:
       POSTGRES_DB: wedding_gifts
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

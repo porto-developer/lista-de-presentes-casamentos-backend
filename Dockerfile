@@ -19,4 +19,4 @@ COPY --from=builder /app/dist ./dist
 
 EXPOSE 3001
 
-CMD ["node", "dist/main"]
+CMD ["sh", "-c", "npx typeorm migration:run -d dist/config/datasource.js && node dist/main"]
